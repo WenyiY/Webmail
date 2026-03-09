@@ -40,6 +40,7 @@ app.get("/mailboxes", async (inRequest: Request, inResponse: Response) => {
         const mailboxes: IMAP.IMailbox[] = await imapWorker.listMailboxes();
         inResponse.status(200).json(mailboxes);
     } catch (inError) {
+        console.log("IMAP Error:", inError);
         inResponse.status(500).send("error");
     }
 });
@@ -123,10 +124,12 @@ app.get("/contacts", async (inRequest: Request, inResponse: Response) => {
 // POST to return the new contact with its generated ID
 app.post("/contacts", async (inRequest: Request, inResponse: Response) => {
     try {
+        console.log("POST /contacts: ", inRequest.body); // Check what data arrived
         const contactsWorker: Contacts.Worker = new Contacts.Worker();
         const contact: IContact = await contactsWorker.addContact(inRequest.body);
         inResponse.status(201).json(contact); // 201 Created
     } catch (inError) {
+        console.log("Error in POST /contacts:", inError);
         inResponse.status(500).send("error");
     }
 });

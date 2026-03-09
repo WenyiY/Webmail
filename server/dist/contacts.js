@@ -33,7 +33,7 @@ exports.Worker = void 0;
  * Added the custom updateContact method here to handle the HTTP PUT feature that added to main.ts
  */
 const path = __importStar(require("path"));
-const nedb_1 = __importDefault(require("nedb"));
+const nedb_1 = __importDefault(require("@seald-io/nedb"));
 class Worker {
     constructor() {
         this.db = new nedb_1.default({

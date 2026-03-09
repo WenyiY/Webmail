@@ -71,6 +71,7 @@ app.get("/mailboxes", (inRequest, inResponse) => __awaiter(void 0, void 0, void 
         inResponse.status(200).json(mailboxes);
     }
     catch (inError) {
+        console.log("IMAP Error:", inError);
         inResponse.status(500).send("error");
     }
 }));
@@ -154,11 +155,13 @@ app.get("/contacts", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0
 // POST to return the new contact with its generated ID
 app.post("/contacts", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log("POST /contacts: ", inRequest.body); // Check what data arrived
         const contactsWorker = new Contacts.Worker();
         const contact = yield contactsWorker.addContact(inRequest.body);
         inResponse.status(201).json(contact); // 201 Created
     }
     catch (inError) {
+        console.log("Error in POST /contacts:", inError);
         inResponse.status(500).send("error");
     }
 }));

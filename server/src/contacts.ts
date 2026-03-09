@@ -4,7 +4,7 @@
  * Added the custom updateContact method here to handle the HTTP PUT feature that added to main.ts
  */
 import * as path from "path";
-import Datastore from "nedb";
+import Datastore from "@seald-io/nedb";
 
 export interface IContact {
     _id?: string, // Using string since NeDB auto-generates alphanumeric keys
