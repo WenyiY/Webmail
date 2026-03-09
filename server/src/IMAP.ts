@@ -78,24 +78,34 @@ export class Worker {
     // requesting only the metadata (envelope) and unique ID to save bandwidth
     public async listMessages(inCallOptions: ICallOptions): Promise<IMessage[]> {
         const client: any = await this.connectToServer();
-        const mailbox: any = await client.selectMailbox(inCallOptions.mailbox);
-        if (mailbox.exists === 0) {
+        try {
+            const mailbox: any = await client.selectMailbox(inCallOptions.mailbox);
+            if (mailbox.exists === 0) {
+                await client.close();
+                return [];
+            }
+            const messages: any[] = await client.listMessages(
+                inCallOptions.mailbox, "1:*", ["uid", "envelope"]
+            );
+            await client.close();
+            const finalMessages: IMessage[] = [];
+            messages.forEach((inValue: any) => {
+                finalMessages.push({
+                    id: inValue.uid, date: inValue.envelope.date,
+                    from: inValue.envelope.from[0].address,
+                    subject: inValue.envelope.subject
+                });
+            });
+            
+            return finalMessages;
+        }
+        catch (inError) {
+            // If the mailbox doesn't exist or isn't selectable, return an empty array 
+            // instead of letting the error bubble up to a 500 response.
+            console.warn(`Mailbox not selectable: ${inCallOptions.mailbox}`);
             await client.close();
             return [];
         }
-        const messages: any[] = await client.listMessages(
-            inCallOptions.mailbox, "1:*", ["uid", "envelope"]
-        );
-        await client.close();
-        const finalMessages: IMessage[] = [];
-        messages.forEach((inValue: any) => {
-            finalMessages.push({
-                id: inValue.uid, date: inValue.envelope.date,
-                from: inValue.envelope.from[0].address,
-                subject: inValue.envelope.subject
-            });
-        });
-        return finalMessages;
     }
 
     // Queries the server for a specific message by its UID, 

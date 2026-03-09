@@ -60,22 +60,31 @@ class Worker {
     listMessages(inCallOptions) {
         return __awaiter(this, void 0, void 0, function* () {
             const client = yield this.connectToServer();
-            const mailbox = yield client.selectMailbox(inCallOptions.mailbox);
-            if (mailbox.exists === 0) {
+            try {
+                const mailbox = yield client.selectMailbox(inCallOptions.mailbox);
+                if (mailbox.exists === 0) {
+                    yield client.close();
+                    return [];
+                }
+                const messages = yield client.listMessages(inCallOptions.mailbox, "1:*", ["uid", "envelope"]);
+                yield client.close();
+                const finalMessages = [];
+                messages.forEach((inValue) => {
+                    finalMessages.push({
+                        id: inValue.uid, date: inValue.envelope.date,
+                        from: inValue.envelope.from[0].address,
+                        subject: inValue.envelope.subject
+                    });
+                });
+                return finalMessages;
+            }
+            catch (inError) {
+                // If the mailbox doesn't exist or isn't selectable, return an empty array 
+                // instead of letting the error bubble up to a 500 response.
+                console.warn(`Mailbox not selectable: ${inCallOptions.mailbox}`);
                 yield client.close();
                 return [];
             }
-            const messages = yield client.listMessages(inCallOptions.mailbox, "1:*", ["uid", "envelope"]);
-            yield client.close();
-            const finalMessages = [];
-            messages.forEach((inValue) => {
-                finalMessages.push({
-                    id: inValue.uid, date: inValue.envelope.date,
-                    from: inValue.envelope.from[0].address,
-                    subject: inValue.envelope.subject
-                });
-            });
-            return finalMessages;
         });
     }
     // Queries the server for a specific message by its UID, 

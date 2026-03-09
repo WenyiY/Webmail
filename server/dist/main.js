@@ -78,34 +78,40 @@ app.get("/mailboxes", (inRequest, inResponse) => __awaiter(void 0, void 0, void 
 // REST Endpoint: List Messages
 // A GET endpoint at /mailboxes/:mailbox captures the mailbox name from the URL path and 
 // returns a list of messages within it
-app.get("/mailboxes/:mailbox", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
+// The(*) tells Express to capture the rest of the URL, including slashes
+app.get("/mailboxes/:mailbox(*)", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const imapWorker = new IMAP.Worker(ServerInfo_1.serverInfo);
+        // decodeURIComponent handles special characters like [Gmail], pass an object with the 'mailbox'
+        const mailboxName = decodeURIComponent(inRequest.params.mailbox);
+        console.log("Attempting to open mailbox:", mailboxName);
         const messages = yield imapWorker.listMessages({
-            mailbox: inRequest.params.mailbox
+            mailbox: mailboxName
         });
         inResponse.status(200).json(messages);
     }
     catch (inError) {
+        // Return an empty array and a 200 status so the client-side 
+        // Axios call doesn't throw an exception.
+        console.error("IMAP Error:", inError);
         inResponse.status(500).send("error");
     }
 }));
 // REST Endpoint: Get a Message
 // A GET endpoint at /messages/:mailbox/:id captures both the mailbox name and message ID to 
 // return the specific plain text body of an email
-app.get("/messages/:mailbox/:id", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
+app.get("/messages/:mailbox(*)/:id", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const imapWorker = new IMAP.Worker(ServerInfo_1.serverInfo);
+        const mailbox = decodeURIComponent(inRequest.params.mailbox);
+        const id = parseInt(inRequest.params.id, 10);
+        console.log(`Fetching body for msg ${id} in ${mailbox}`);
         const messageBody = yield imapWorker.getMessageBody({
-            mailbox: inRequest.params.mailbox,
-            id: parseInt(inRequest.params.id, 10)
+            mailbox: mailbox,
+            id: id
         });
-        if (messageBody) {
-            inResponse.status(200).send(messageBody);
-        }
-        else {
-            inResponse.status(404).send("Message not found");
-        }
+        // Send the message body back as a plain string
+        inResponse.send(messageBody);
     }
     catch (inError) {
         inResponse.status(500).send("error");
@@ -113,7 +119,7 @@ app.get("/messages/:mailbox/:id", (inRequest, inResponse) => __awaiter(void 0, v
 }));
 // REST Endpoint: Delete a Message
 // A DELETE endpoint at /messages/:mailbox/:id deletes a specific message from the server
-app.delete("/messages/:mailbox/:id", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
+app.delete("/messages/:mailbox(*)/:id", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const imapWorker = new IMAP.Worker(ServerInfo_1.serverInfo);
         yield imapWorker.deleteMessage({
@@ -170,13 +176,9 @@ app.post("/contacts", (inRequest, inResponse) => __awaiter(void 0, void 0, void 
 app.put("/contacts/:id", (inRequest, inResponse) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const contactsWorker = new Contacts.Worker();
-        const numUpdated = yield contactsWorker.updateContact(inRequest.params.id, inRequest.body);
-        if (numUpdated === 0) {
-            inResponse.status(404).send("Contact not found");
-        }
-        else {
-            inResponse.status(200).send("ok");
-        }
+        const updatedContact = yield contactsWorker.updateContact(inRequest.params.id, inRequest.body);
+        // Return the updated contact as JSON so the client can update its local state
+        inResponse.json(updatedContact);
     }
     catch (inError) {
         inResponse.status(500).send("error");

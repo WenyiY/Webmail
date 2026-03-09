@@ -69,14 +69,16 @@ export class Worker {
     }
 
     // EXCLUSIVE FEATURE ADDITION: Updating an existing contact by its ID
-    public updateContact(inID: string, inContact: IContact): Promise<number> {
+    public updateContact(inID: string, inContact: IContact): Promise<IContact> {
         return new Promise((inResolve, inReject) => {
-            this.db.update({ _id: inID }, inContact, {},
-                (inError: Error | null, numReplaced: number) => {
+            // NeDB update: { query }, { new data }, { options }
+            this.db.update({ _id: inID }, { name: inContact.name, email: inContact.email }, {},
+                (inError: Error | null, inNumUpdated: number) => {
                     if (inError) {
                         inReject(inError);
                     } else {
-                        inResolve(numReplaced); // Returns the number of documents modified
+                        // Return the full contact object so the client can update its list
+                        inResolve({ _id: inID, name: inContact.name, email: inContact.email });
                     }
                 }
             );

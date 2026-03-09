@@ -18,12 +18,17 @@ export class Worker {
     }
     // Triggers GET /mailboxes/:mailbox to fetch message headers (Sender, Subject, Date)
     public async listMessages(inMailbox: string): Promise<IMessage[]> {
-        const response: AxiosResponse = await axios.get(`${config.serverAddress}/mailboxes/${inMailbox}`);
+        const response = await axios.get(
+            `${config.serverAddress}/mailboxes/${encodeURIComponent(inMailbox)}`
+        );
         return response.data;
     }
     // Triggers GET /messages/:mailbox/:id to fetch the heavy email body text
     public async getMessageBody(inID: string, inMailbox: string): Promise<string> {
-        const response: AxiosResponse = await axios.get(`${config.serverAddress}/messages/${inMailbox}/${inID}`);
+        // encodeURIComponent handles the [Gmail]/Sent Mail part
+        const response = await axios.get(
+            `${config.serverAddress}/messages/${encodeURIComponent(inMailbox)}/${inID}`
+        );
         return response.data;
     }
     // Triggers DELETE /messages/:mailbox/:id to delete an email from the server

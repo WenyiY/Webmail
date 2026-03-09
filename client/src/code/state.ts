@@ -97,6 +97,7 @@ export function createState(inParentComponent: React.Component): any {
             // Asks the IMAP worker to fetch messages for a specific mailbox from the backend
             getMessages: async function (this: any, inPath: string): Promise<void> {
                 this.state.showHidePleaseWait(true);
+                try {
                 const imapWorker: IMAP.Worker = new IMAP.Worker();
                 const messages: IMAP.IMessage[] = await imapWorker.listMessages(inPath);
                 this.state.showHidePleaseWait(false);
@@ -104,6 +105,14 @@ export function createState(inParentComponent: React.Component): any {
                 messages.forEach((inMessage: IMAP.IMessage) => {
                     this.state.addMessageToList(inMessage);
                 });
+                } catch (inError) {
+                    console.error("Error fetching messages:", inError);
+                    alert("Could not retrieve messages for this folder.");
+                } finally {
+                    // This ensures the loading spinner always disappears, 
+                    // even if the request fails.
+                    this.state.showHidePleaseWait(false);
+                }
             }.bind(inParentComponent),
 
             clearMessages: function (this: any): void {
@@ -148,17 +157,41 @@ export function createState(inParentComponent: React.Component): any {
 
             // NEW UX FEATURE: Asks the Contacts worker to PUT (update) an existing contact on the backend.
             updateContact: async function (this: any): Promise<void> {
-                this.state.showHidePleaseWait(true);
-                const contactsWorker: Contacts.Worker = new Contacts.Worker();
-                const updatedContact: Contacts.IContact = await contactsWorker.updateContact({
-                    _id: this.state.contactID,
-                    name: this.state.contactName,
-                    email: this.state.contactEmail
-                });
-                this.state.showHidePleaseWait(false);
-                // Replace the old contact object in the local array with the updated one
-                const updatedList = this.state.contacts.map((c: Contacts.IContact) => c._id === updatedContact._id ? updatedContact : c);
-                this.setState(() => ({ contacts: updatedList, contactID: null, contactName: "", contactEmail: "", currentView: "welcome" }));
+                try {
+                    this.state.showHidePleaseWait(true);
+                    const contactsWorker: Contacts.Worker = new Contacts.Worker();
+
+                    // Call the server to update the database
+                    const updatedContact: Contacts.IContact = await contactsWorker.updateContact({
+                        _id: this.state.contactID,
+                        name: this.state.contactName,
+                        email: this.state.contactEmail
+                    });
+
+                    this.state.showHidePleaseWait(false);
+
+                    // Create a new array for the list to trigger React re-render
+                    // Look for the contact with the matching ID and replace it
+                    const updatedList = this.state.contacts.map((c: Contacts.IContact) =>
+                        c._id === updatedContact._id ? updatedContact : c
+                    );
+
+                    // Update the state and provide feedback
+                    this.setState(() => ({
+                        contacts: updatedList,
+                        contactID: null,
+                        contactName: "",
+                        contactEmail: "",
+                        currentView: "welcome"
+                    }), () => {
+                        // Callback runs after the state is successfully set
+                        alert("Contact updated successfully!");
+                    });
+
+                } catch (error) {
+                    this.state.showHidePleaseWait(false);
+                    alert("Failed to update contact. Check server logs.");
+                }
             }.bind(inParentComponent),
 
             // Asks the IMAP worker to fetch the email body text from the backend when a message is clicked.

@@ -48,14 +48,23 @@ app.get("/mailboxes", async (inRequest: Request, inResponse: Response) => {
 // REST Endpoint: List Messages
 // A GET endpoint at /mailboxes/:mailbox captures the mailbox name from the URL path and 
 // returns a list of messages within it
-app.get("/mailboxes/:mailbox", async (inRequest: Request, inResponse: Response) => {
+// The(*) tells Express to capture the rest of the URL, including slashes
+app.get("/mailboxes/:mailbox(*)", async (inRequest: Request, inResponse: Response) => {
     try {
         const imapWorker: IMAP.Worker = new IMAP.Worker(serverInfo);
-        const messages: IMAP.IMessage[] = await imapWorker.listMessages({
-            mailbox: inRequest.params.mailbox
+        // decodeURIComponent handles special characters like [Gmail], pass an object with the 'mailbox'
+        const mailboxName = decodeURIComponent(inRequest.params.mailbox);
+
+        console.log("Attempting to open mailbox:", mailboxName);
+
+        const messages = await imapWorker.listMessages({
+            mailbox: mailboxName
         });
         inResponse.status(200).json(messages);
     } catch (inError) {
+        // Return an empty array and a 200 status so the client-side 
+        // Axios call doesn't throw an exception.
+        console.error("IMAP Error:", inError);
         inResponse.status(500).send("error");
     }
 });
@@ -63,18 +72,20 @@ app.get("/mailboxes/:mailbox", async (inRequest: Request, inResponse: Response) 
 // REST Endpoint: Get a Message
 // A GET endpoint at /messages/:mailbox/:id captures both the mailbox name and message ID to 
 // return the specific plain text body of an email
-app.get("/messages/:mailbox/:id", async (inRequest: Request, inResponse: Response) => {
+app.get("/messages/:mailbox(*)/:id", async (inRequest: Request, inResponse: Response) => {
     try {
         const imapWorker: IMAP.Worker = new IMAP.Worker(serverInfo);
-        const messageBody: string | undefined = await imapWorker.getMessageBody({
-            mailbox: inRequest.params.mailbox,
-            id: parseInt(inRequest.params.id, 10)
+        const mailbox = decodeURIComponent(inRequest.params.mailbox);
+        const id = parseInt(inRequest.params.id, 10);
+
+        console.log(`Fetching body for msg ${id} in ${mailbox}`);
+
+        const messageBody = await imapWorker.getMessageBody({
+            mailbox: mailbox,
+            id: id
         });
-        if (messageBody) {
-            inResponse.status(200).send(messageBody);
-        } else {
-            inResponse.status(404).send("Message not found");
-        }
+        // Send the message body back as a plain string
+        inResponse.send(messageBody);
     } catch (inError) {
         inResponse.status(500).send("error");
     }
@@ -82,13 +93,13 @@ app.get("/messages/:mailbox/:id", async (inRequest: Request, inResponse: Respons
 
 // REST Endpoint: Delete a Message
 // A DELETE endpoint at /messages/:mailbox/:id deletes a specific message from the server
-app.delete("/messages/:mailbox/:id", async (inRequest: Request, inResponse: Response) => {
+app.delete("/messages/:mailbox(*)/:id", async (inRequest: Request, inResponse: Response) => {
     try {
-        const imapWorker: IMAP.Worker = new IMAP.Worker(serverInfo);
+        const imapWorker: IMAP.Worker = new IMAP.Worker(serverInfo);   
         await imapWorker.deleteMessage({
             mailbox: inRequest.params.mailbox,
             id: parseInt(inRequest.params.id, 10)
-        });
+        }); 
         inResponse.status(204).send(); // 204 No Content is standard for successful DELETE
     } catch (inError) {
         inResponse.status(500).send("error");
@@ -139,12 +150,9 @@ app.post("/contacts", async (inRequest: Request, inResponse: Response) => {
 app.put("/contacts/:id", async (inRequest: Request, inResponse: Response) => {
     try {
         const contactsWorker: Contacts.Worker = new Contacts.Worker();
-        const numUpdated = await contactsWorker.updateContact(inRequest.params.id, inRequest.body);
-        if (numUpdated === 0) {
-            inResponse.status(404).send("Contact not found");
-        } else {
-            inResponse.status(200).send("ok");
-        }
+        const updatedContact = await contactsWorker.updateContact(inRequest.params.id, inRequest.body);
+        // Return the updated contact as JSON so the client can update its local state
+        inResponse.json(updatedContact);
     } catch (inError) {
         inResponse.status(500).send("error");
     }
