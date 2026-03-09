@@ -1,1 +1,55 @@
-/* A regular old CSS file with some shared styles */
+/* Defines the CSS Grid layout used by the BaseLayout component to structure the application */
+.appContainer {
+    display: grid;
+    grid-template-columns: 150px 1fr 240px;
+    grid-template-rows: 50px 1fr;
+    width: 100vw;
+    height: 100vh;
+}
+
+.toolbar {
+    grid-column: 1 / 4;
+    grid-row: 1 / 1;
+    border-bottom: 1px solid #e0e0e0;
+    padding-top: 8px;
+    padding-left: 4px;
+}
+
+.mailboxList {
+    grid-column: 1 / 1;
+    grid-row: 2 / 2;
+    border-right: 1px solid #e0e0e0;
+    padding-top: 6px;
+    padding-left: 4px;
+    overflow: auto;
+}
+
+.centerArea {
+    display: grid;
+    grid-template-rows: 200px 1fr;
+    grid-column: 2 / 3;
+}
+
+.messageList {
+    border-bottom: 1px solid #e0e0e0;
+    grid-row: 1 / 1;
+    overflow: auto;
+}
+
+.centerViews {
+    grid-row: 2 / 2;
+    padding: 4px;
+    overflow: auto;
+}
+
+.contactList {
+    grid-column: 3 / 3;
+    grid-row: 2 / 2;
+    border-left: 1px solid #e0e0e0;
+    padding: 4px;
+    overflow: auto;
+}
+
+.messageInfoField {
+    color: #000000 !important;
+}
